@@ -1,6 +1,7 @@
 package com.inovagab.app.data.mock
 
 import com.inovagab.app.data.model.*
+import com.inovagab.app.utils.DateUtils
 
 object MockData {
     val users = mutableListOf(
@@ -10,101 +11,117 @@ object MockData {
     )
 
     val guidelines = mutableListOf(
-        StrategicGuideline("1", "Eficiência em Combustível", "Projetos e ideias focadas em reduzir o consumo de diesel na frota.", "Operações"),
-        StrategicGuideline("2", "Transformação Digital", "Automação de processos internos e fim do uso de papel.", "Tecnologia"),
-        StrategicGuideline("3", "Experiência do Passageiro", "Iniciativas para melhorar o conforto e pontualidade.", "Atendimento")
+        StrategicGuideline("1", "Eficiência em Combustível", "Projetos focados em reduzir consumo.", "Operações"),
+        StrategicGuideline("2", "Transformação Digital", "Automação de processos internos.", "Tecnologia")
     )
 
     val ideas = mutableListOf(
         Idea(
             id = "1", 
-            titulo = "Telemetria Preditiva nos Motores", 
-            descricao = "Instalar sensores OBD2 que preveem falhas antes delas ocorrerem, evitando ônibus parados na estrada.", 
+            titulo = "Telemetria Preditiva", 
+            descricao = "Sensores OBD2 para evitar falhas.", 
             categoria = "Tecnologia", 
             autorId = "1", 
             autorNome = "João Operador", 
             status = IdeaStatus.EM_ANALISE,
             prioridade = Priority.ALTA,
-            impactoEsperado = "Redução de 15% em manutenções corretivas",
+            impactoEsperado = "Redução de manutenção",
             economiaGeradaEstimada = 120000.0,
-            tags = listOf("IoT", "Manutenção", "Frota")
-        ),
-        Idea(
-            id = "2", 
-            titulo = "Reaproveitamento de Água na Lavagem", 
-            descricao = "Criar um sistema de filtragem nas garagens para reutilizar a água que lava a frota.", 
-            categoria = "Sustentabilidade", 
-            autorId = "1", 
-            autorNome = "João Operador", 
-            status = IdeaStatus.APROVADA, 
-            prioridade = Priority.MEDIA,
-            impactoEsperado = "Queda de 40% na conta de água",
-            economiaGeradaEstimada = 45000.0,
-            tags = listOf("ESG", "Custos", "Garagem")
-        ),
-        Idea(
-            id = "3", 
-            titulo = "Totem de Autoatendimento Rápido", 
-            descricao = "Colocar totens nas rodoviárias para embarque via QR Code sem passar no guichê.", 
-            categoria = "Atendimento", 
-            autorId = "4", 
-            autorNome = "Ana Atendente", 
-            status = IdeaStatus.CADASTRADA, 
-            prioridade = Priority.BAIXA,
-            impactoEsperado = "Redução de filas",
-            economiaGeradaEstimada = 0.0,
-            tags = listOf("CX", "Rodoviária")
+            tags = listOf("IoT", "Manutenção"),
+            dataCriacao = DateUtils.addDaysToCurrentDate(-10)
         )
     )
 
     val projects = mutableListOf(
         Project(
             id = "1", 
-            titulo = "Automação de Escala de Motoristas", 
-            descricao = "Uso de algoritmo de roteirização para otimizar as escalas e reduzir horas extras.", 
+            titulo = "Otimização de Rotas Operacionais", 
+            descricao = "Uso de roteirização para reduzir KM rodado vazio.", 
             responsavelId = "2",
-            responsavelNome = "Maria Gestora", 
-            etapaAtual = "Desenvolvimento de Software", 
-            status = ProjectStatus.EM_ANDAMENTO, 
+            responsavelNome = "Maria Gestora",
+            areaResponsavel = "Logística",
+            etapaAtual = "Execução", 
+            status = ProjectStatus.EM_ANDAMENTO,
+            prioridade = Priority.ALTA,
+            risco = Risk.MEDIO,
+            dataInicioPrevista = DateUtils.addDaysToCurrentDate(-30),
+            dataFimPrevista = DateUtils.addDaysToCurrentDate(15), // NO_PRAZO
             investimento = 85000.0, 
-            retornoFinanceiro = 0.0, // Ainda em andamento, retorno não realizado integralmente
+            retornoFinanceiro = 150000.0,
+            economiaEstimada = 65000.0,
+            ganhoProdutividade = 12.0,
             progressoPercentual = 65,
-            prazoFinal = "15/10/2026",
-            categoria = "Tecnologia",
-            tags = listOf("IA", "RH", "Opex"),
-            comparativoYOY = 0.0
+            categoria = "Logística",
+            tags = listOf("IA", "Rotas"),
+            comparativoYOY = 5.0
         ),
         Project(
             id = "2", 
-            titulo = "Eco Frota: Transição Elétrica", 
-            descricao = "Substituição de 5% da frota urbana por ônibus elétricos.", 
-            responsavelId = "3",
-            responsavelNome = "Carlos Líder", 
-            etapaAtual = "Mensuração de Resultados", 
-            status = ProjectStatus.CONCLUIDO, 
-            investimento = 2500000.0, 
-            retornoFinanceiro = 3100000.0, 
+            titulo = "Digitalização do Checklist", 
+            descricao = "App para inspeção de veículos.", 
+            responsavelId = "2",
+            responsavelNome = "Maria Gestora",
+            areaResponsavel = "Manutenção",
+            etapaAtual = "Resultado", 
+            status = ProjectStatus.CONCLUIDO,
+            prioridade = Priority.MEDIA,
+            risco = Risk.BAIXO,
+            dataInicioPrevista = DateUtils.addDaysToCurrentDate(-90),
+            dataFimPrevista = DateUtils.addDaysToCurrentDate(-5), // CONCLUIDO
+            dataInicioReal = DateUtils.addDaysToCurrentDate(-90),
+            dataFimReal = DateUtils.addDaysToCurrentDate(-5),
+            investimento = 25000.0, 
+            retornoFinanceiro = 80000.0,
+            economiaEstimada = 55000.0,
+            ganhoProdutividade = 30.0,
             progressoPercentual = 100,
-            prazoFinal = "01/03/2026",
-            categoria = "Sustentabilidade",
-            tags = listOf("ESG", "Capex", "Frota"),
-            comparativoYOY = 14.5
+            categoria = "Manutenção",
+            tags = listOf("Digital", "Paperless"),
+            comparativoYOY = 12.5
         ),
         Project(
             id = "3", 
-            titulo = "App do Cliente 2.0", 
-            descricao = "Reformulação do aplicativo de venda de passagens com programa de fidelidade.", 
-            responsavelId = "2",
-            responsavelNome = "Maria Gestora", 
-            etapaAtual = "Testes A/B", 
-            status = ProjectStatus.EM_ANDAMENTO, 
+            titulo = "Redução Consumo de Combustível", 
+            descricao = "Treinamento e gamificação para motoristas.", 
+            responsavelId = "3",
+            responsavelNome = "Carlos Líder",
+            areaResponsavel = "Sustentabilidade",
+            etapaAtual = "Validação", 
+            status = ProjectStatus.EM_ANDAMENTO,
+            prioridade = Priority.CRITICA,
+            risco = Risk.ALTO,
+            dataInicioPrevista = DateUtils.addDaysToCurrentDate(-120),
+            dataFimPrevista = DateUtils.addDaysToCurrentDate(-2), // ATRASADO
             investimento = 120000.0, 
-            retornoFinanceiro = 35000.0, 
-            progressoPercentual = 80,
-            prazoFinal = "30/08/2026",
-            categoria = "Vendas",
-            tags = listOf("CX", "Receita", "Mobile"),
-            comparativoYOY = 5.2
+            retornoFinanceiro = 500000.0,
+            economiaEstimada = 380000.0,
+            ganhoProdutividade = 5.0,
+            progressoPercentual = 85,
+            categoria = "Sustentabilidade",
+            tags = listOf("ESG", "Frota"),
+            comparativoYOY = 8.2
+        ),
+        Project(
+            id = "4", 
+            titulo = "Automação de Triagem Interna", 
+            descricao = "Bot para SAC e demandas da garagem.", 
+            responsavelId = "1",
+            responsavelNome = "João Operador",
+            areaResponsavel = "Atendimento",
+            etapaAtual = "Diagnóstico", 
+            status = ProjectStatus.EM_ANDAMENTO,
+            prioridade = Priority.BAIXA,
+            risco = Risk.BAIXO,
+            dataInicioPrevista = DateUtils.addDaysToCurrentDate(-10),
+            dataFimPrevista = DateUtils.addDaysToCurrentDate(5), // PROXIMO_VENCIMENTO
+            investimento = 10000.0, 
+            retornoFinanceiro = 45000.0,
+            economiaEstimada = 35000.0,
+            ganhoProdutividade = 40.0,
+            progressoPercentual = 30,
+            categoria = "Atendimento",
+            tags = listOf("Bot", "CX"),
+            comparativoYOY = 2.1
         )
     )
 }

@@ -13,11 +13,32 @@ class ManagerViewModel(private val repository: AppRepository) : ViewModel() {
         repository.logout()
     }
 
-    fun approveIdea(ideaId: String, prioridade: Priority) {
+    fun approveIdeaAndCreateProject(
+        ideaId: String, 
+        prioridade: Priority,
+        risco: Risk,
+        area: String,
+        dataInicio: String,
+        dataFim: String,
+        investimento: Double,
+        retorno: Double,
+        titulo: String,
+        descricao: String
+    ) {
+        // Primeiro, aprova a ideia
         repository.updateIdeaStatus(ideaId, IdeaStatus.APROVADA, prioridade)
-    }
-
-    fun createProject(titulo: String, desc: String, invest: Double) {
-        repository.addProject(titulo = titulo, descricao = desc, investimento = invest)
+        
+        // Em seguida, cria o projeto de forma automatizada com os dados do modal
+        repository.addProject(
+            titulo = titulo,
+            descricao = descricao,
+            investimento = investimento,
+            prioridade = prioridade,
+            risco = risco,
+            area = area,
+            dataInicio = dataInicio,
+            dataFim = dataFim,
+            retorno = retorno
+        )
     }
 }

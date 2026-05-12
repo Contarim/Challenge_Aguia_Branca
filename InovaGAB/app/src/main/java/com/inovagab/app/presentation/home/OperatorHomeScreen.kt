@@ -239,6 +239,7 @@ fun CompactEnterpriseCard(idea: Idea) {
                         }
                         Spacer(modifier = Modifier.width(4.dp))
                     }
+                    com.inovagab.app.ui.components.PriorityChip(idea.prioridade)
                 }
                 Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(statusBg).padding(horizontal = 6.dp, vertical = 2.dp)) {
                     Text(idea.status.label, style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.Bold)

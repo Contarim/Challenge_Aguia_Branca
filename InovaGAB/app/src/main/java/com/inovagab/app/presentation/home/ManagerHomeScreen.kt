@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -23,7 +25,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.inovagab.app.data.model.*
 import com.inovagab.app.presentation.AppViewModelFactory
+import com.inovagab.app.ui.components.*
 import com.inovagab.app.ui.theme.*
+import com.inovagab.app.utils.DateUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,9 +40,7 @@ fun ManagerHomeScreen(
     val projects by viewModel.projects.collectAsState(initial = emptyList())
     
     var selectedTab by remember { mutableStateOf(0) }
-    var selectedIdeaToApprove by remember { mutableStateOf<Idea?>(null) }
-    var showProjectDialog by remember { mutableStateOf(false) }
-    var automatedProjectIdea by remember { mutableStateOf<Idea?>(null) }
+    var ideaToApprove by remember { mutableStateOf<Idea?>(null) }
 
     Scaffold(
         topBar = {
@@ -69,66 +71,36 @@ fun ManagerHomeScreen(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
                     icon = { Icon(Icons.Default.FilterList, contentDescription = null) },
-                    label = { Text("Funil de Ideias") },
+                    label = { Text("Funil") },
                     colors = NavigationBarItemDefaults.colors(indicatorColor = StatusInfoBg, selectedIconColor = GabAccent, selectedTextColor = GabAccent)
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     icon = { Icon(Icons.Default.AccountTree, contentDescription = null) },
-                    label = { Text("Projetos Ativos") },
+                    label = { Text("Projetos") },
                     colors = NavigationBarItemDefaults.colors(indicatorColor = StatusInfoBg, selectedIconColor = GabAccent, selectedTextColor = GabAccent)
-                )
-            }
-        },
-        floatingActionButton = {
-            if (selectedTab == 1) {
-                ExtendedFloatingActionButton(
-                    onClick = { showProjectDialog = true },
-                    icon = { Icon(Icons.Default.Add, "Novo Projeto") },
-                    text = { Text("Novo Projeto", fontWeight = FontWeight.Bold) },
-                    containerColor = GabDarkBlue,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(12.dp)
                 )
             }
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize().background(GabBackground)) {
             if (selectedTab == 0) {
-                ManagerIdeasFunnel(ideas, onApproveClick = { selectedIdeaToApprove = it })
+                ManagerIdeasFunnel(ideas, onApproveClick = { ideaToApprove = it })
             } else {
                 ManagerProjectsContent(projects)
             }
         }
 
-        selectedIdeaToApprove?.let { idea ->
-            ApproveIdeaDialog(
+        ideaToApprove?.let { idea ->
+            ApproveAndCreateProjectDialog(
                 idea = idea,
-                onDismiss = { selectedIdeaToApprove = null },
-                onApprove = { priority ->
-                    viewModel.approveIdea(idea.id, priority)
-                    selectedIdeaToApprove = null
-                    automatedProjectIdea = idea
-                }
-            )
-        }
-
-        if (showProjectDialog || automatedProjectIdea != null) {
-            val initialTitle = automatedProjectIdea?.titulo ?: ""
-            val initialDesc = automatedProjectIdea?.descricao ?: ""
-            
-            NewProjectDialog(
-                initialTitle = initialTitle,
-                initialDesc = initialDesc,
-                onDismiss = { 
-                    showProjectDialog = false
-                    automatedProjectIdea = null
-                },
-                onCreate = { t, d, i ->
-                    viewModel.createProject(t, d, i)
-                    showProjectDialog = false
-                    automatedProjectIdea = null
+                onDismiss = { ideaToApprove = null },
+                onConfirm = { prioridade, risco, area, dataInicio, dataFim, invest, retorno ->
+                    viewModel.approveIdeaAndCreateProject(
+                        idea.id, prioridade, risco, area, dataInicio, dataFim, invest, retorno, idea.titulo, idea.descricao
+                    )
+                    ideaToApprove = null
                 }
             )
         }
@@ -146,7 +118,6 @@ fun ManagerIdeasFunnel(ideas: List<Idea>, onApproveClick: (Idea) -> Unit) {
     LazyColumn(contentPadding = PaddingValues(16.dp), modifier = Modifier.fillMaxSize()) {
         item {
             Text("Funil de Triagem", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
-            Text("${pendingIdeas.size} ideias aguardam sua curadoria.", style = MaterialTheme.typography.labelMedium, color = GabTextSecondary)
             Spacer(modifier = Modifier.height(16.dp))
             
             LazyRow(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
@@ -213,12 +184,12 @@ fun CuratorshipIdeaCard(idea: Idea, onApproveClick: (Idea) -> Unit) {
                 }
                 Button(
                     onClick = { onApproveClick(idea) },
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusSuccess),
+                    colors = ButtonDefaults.buttonColors(containerColor = GabAccent),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp),
                     shape = RoundedCornerShape(6.dp)
                 ) {
-                    Text("Aprovar", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    Text("Avaliar", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }
@@ -229,7 +200,7 @@ fun CuratorshipIdeaCard(idea: Idea, onApproveClick: (Idea) -> Unit) {
 fun ManagerProjectsContent(projects: List<Project>) {
     LazyColumn(contentPadding = PaddingValues(16.dp), modifier = Modifier.fillMaxSize()) {
         item {
-            Text("Projetos Ativos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
+            Text("Gestão de Execução (Projetos)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -240,7 +211,7 @@ fun ManagerProjectsContent(projects: List<Project>) {
                 }
             }
         } else {
-            items(projects) { project ->
+            items(projects.sortedBy { it.statusPrazo.ordinal }) { project ->
                 EnterpriseProjectCard(project)
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -259,116 +230,121 @@ fun EnterpriseProjectCard(project: Project) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(project.etapaAtual.uppercase(), style = MaterialTheme.typography.labelSmall, color = GabAccent, fontWeight = FontWeight.Bold)
-                Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(if (project.progressoPercentual == 100) StatusSuccessBg else StatusInfoBg).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                    Text("${project.progressoPercentual}%", style = MaterialTheme.typography.labelSmall, color = if (project.progressoPercentual == 100) StatusSuccess else StatusInfo, fontWeight = FontWeight.Bold)
-                }
+                StatusPrazoChip(project.statusPrazo)
+                PriorityChip(project.prioridade)
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(project.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(project.areaResponsavel, style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
+            
             Spacer(modifier = Modifier.height(12.dp))
             
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                    Text("Prazo Fim", style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
+                    Text(project.dataFimPrevista, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Progresso", style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
+                    Text("${project.progressoPercentual}%", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Dias Restantes", style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
+                    Text(if(project.diasRestantes < 0) "Atrasado" else "${project.diasRestantes} dias", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = if(project.diasRestantes < 0) StatusError else GabTextPrimary)
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             LinearProgressIndicator(
                 progress = project.progressoPercentual / 100f,
                 modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                 color = if (project.progressoPercentual == 100) StatusSuccess else GabAccent,
                 trackColor = GabSecondary
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("Prazo", style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
-                    Text(project.prazoFinal, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("Investimento", style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
-                    Text("R$ ${project.investimento.toInt()}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
-                }
-            }
         }
     }
 }
 
 @Composable
-fun ApproveIdeaDialog(idea: Idea, onDismiss: () -> Unit, onApprove: (Priority) -> Unit) {
-    var selectedPriority by remember { mutableStateOf(Priority.MEDIA) }
+fun ApproveAndCreateProjectDialog(
+    idea: Idea, 
+    onDismiss: () -> Unit, 
+    onConfirm: (Priority, Risk, String, String, String, Double, Double) -> Unit
+) {
+    var prioridade by remember { mutableStateOf(Priority.MEDIA) }
+    var risco by remember { mutableStateOf(Risk.MEDIO) }
+    var area by remember { mutableStateOf("Operações") }
+    
+    // Simulação simplificada de datas como String para não quebrar API 24
+    var dataInicio by remember { mutableStateOf(DateUtils.getCurrentDate()) }
+    var dataFim by remember { mutableStateOf(DateUtils.addDaysToCurrentDate(30)) }
+    
+    var investStr by remember { mutableStateOf("0") }
+    var retornoStr by remember { mutableStateOf("0") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = GabSurface,
-        title = { Text("Aprovar: ${idea.titulo}", fontWeight = FontWeight.Bold) },
+        title = { Text("Aprovação Tática", fontWeight = FontWeight.Bold) },
         text = {
-            Column {
-                Text("Defina a prioridade de execução.", color = GabTextSecondary)
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text("Preencha os SLAs de execução para converter em projeto.", style = MaterialTheme.typography.labelMedium, color = GabTextSecondary)
                 Spacer(modifier = Modifier.height(16.dp))
-                Priority.values().forEach { prio ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(selected = selectedPriority == prio, onClick = { selectedPriority = prio }, colors = RadioButtonDefaults.colors(selectedColor = GabAccent))
-                        Text(prio.label)
+                
+                Text("Prioridade", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                LazyRow {
+                    items(Priority.values()) { prio ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = prioridade == prio, onClick = { prioridade = prio })
+                            Text(prio.name, fontSize = 12.sp)
+                        }
                     }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Risco Estimado", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                LazyRow {
+                    items(Risk.values()) { r ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = risco == r, onClick = { risco = r })
+                            Text(r.name, fontSize = 12.sp)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = area,
+                    onValueChange = { area = it },
+                    label = { Text("Área Responsável") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = dataInicio, onValueChange = { dataInicio = it }, label = { Text("Início (dd/MM/yyyy)") }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = dataFim, onValueChange = { dataFim = it }, label = { Text("Fim (dd/MM/yyyy)") }, modifier = Modifier.weight(1f))
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = investStr, onValueChange = { investStr = it }, label = { Text("CAPEX/OPEX R$") }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = retornoStr, onValueChange = { retornoStr = it }, label = { Text("Retorno R$") }, modifier = Modifier.weight(1f))
                 }
             }
         },
         confirmButton = {
-            Button(onClick = { onApprove(selectedPriority) }, colors = ButtonDefaults.buttonColors(containerColor = StatusSuccess), shape = RoundedCornerShape(8.dp)) {
-                Text("Confirmar Aprovação", color = Color.White)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = GabTextSecondary) }
-        }
-    )
-}
-
-@Composable
-fun NewProjectDialog(initialTitle: String = "", initialDesc: String = "", onDismiss: () -> Unit, onCreate: (String, String, Double) -> Unit) {
-    var title by remember { mutableStateOf(initialTitle) }
-    var desc by remember { mutableStateOf(initialDesc) }
-    var invest by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = GabSurface,
-        title = { Text("Novo Projeto Estruturado", fontWeight = FontWeight.Bold) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Título") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = desc,
-                    onValueChange = { desc = it },
-                    label = { Text("Descrição Executiva") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = invest,
-                    onValueChange = { invest = it },
-                    label = { Text("Investimento Previsto (CAPEX/OPEX)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-            }
-        },
-        confirmButton = {
             Button(
-                onClick = { onCreate(title, desc, invest.toDoubleOrNull() ?: 0.0) },
-                colors = ButtonDefaults.buttonColors(containerColor = GabDarkBlue),
+                onClick = { 
+                    val inv = investStr.toDoubleOrNull() ?: 0.0
+                    val ret = retornoStr.toDoubleOrNull() ?: 0.0
+                    onConfirm(prioridade, risco, area, dataInicio, dataFim, inv, ret) 
+                }, 
+                colors = ButtonDefaults.buttonColors(containerColor = StatusSuccess),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Criar Projeto")
+                Text("Aprovar e Criar Projeto", color = Color.White)
             }
         },
         dismissButton = {

@@ -73,7 +73,9 @@ class AppRepository {
     }
 
     fun addProject(
-        titulo: String, descricao: String, investimento: Double
+        titulo: String, descricao: String, investimento: Double,
+        prioridade: Priority, risco: Risk, area: String,
+        dataInicio: String, dataFim: String, retorno: Double
     ) {
         val user = _currentUser.value ?: return
         val newProject = Project(
@@ -82,14 +84,20 @@ class AppRepository {
             descricao = descricao,
             responsavelId = user.id,
             responsavelNome = user.nome,
+            areaResponsavel = area,
             etapaAtual = "Planejamento",
             status = ProjectStatus.EM_ANDAMENTO,
+            prioridade = prioridade,
+            risco = risco,
+            dataInicioPrevista = dataInicio,
+            dataFimPrevista = dataFim,
             investimento = investimento,
-            retornoFinanceiro = 0.0,
+            retornoFinanceiro = retorno,
+            economiaEstimada = 0.0,
+            ganhoProdutividade = 0.0,
             progressoPercentual = 0,
-            prazoFinal = "A definir",
-            categoria = "Novos Negócios",
-            tags = listOf("Em Avaliação"),
+            categoria = area,
+            tags = listOf(area, prioridade.label.split(" ")[0]),
             comparativoYOY = 0.0
         )
         val currentList = _projects.value.toMutableList()

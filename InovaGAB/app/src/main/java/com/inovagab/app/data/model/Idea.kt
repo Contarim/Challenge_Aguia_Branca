@@ -27,6 +27,7 @@ enum class IdeaStatus(val label: String) {
 }
 
 enum class Priority(val label: String) {
+    CRITICA("Crítica Prioridade"),
     ALTA("Alta Prioridade"),
     MEDIA("Média Prioridade"),
     BAIXA("Baixa Prioridade")
