@@ -29,7 +29,9 @@ A aplicação é dividida em 3 experiências perfeitamente isoladas:
 O InovaGAB foi construído do zero focando em uma UI/UX Premium (Enterprise Level) e com arquitetura reativa sólida:
 
 - **Linguagem**: Kotlin (1.9.22)
-- **UI Toolkit**: Jetpack Compose (Material 3) com componentes 100% nativos (Canvas para gráficos, sem dependências de UI externas).
+- **UI Toolkit**: Jetpack Compose (Material 3) com componentes 100% nativos e Design System personalizado.
+- **UX Avançada**: Sistema de máscaras inteligentes para entradas de **Data e Moeda (R$)**, garantindo integridade de dados e facilidade de uso.
+- **Governança Separada**: Fluxo de aprovação segmentado onde gestores cuidam do tático e a liderança detém o controle estratégico e financeiro.
 - **Gerenciamento de Estado**: StateFlow e Coroutines para uma arquitetura Unidirectional Data Flow.
 - **Engine Tático**: Sistema próprio em memória (`DateUtils`) para cálculo e simulação de Prazos e SLAs dinâmicos (Retrocompatível até Android 7.0 - API 24).
 
