@@ -91,8 +91,8 @@ class AppRepository {
             risco = risco,
             dataInicioPrevista = dataInicio,
             dataFimPrevista = dataFim,
-            investimento = investimento,
-            retornoFinanceiro = retorno,
+            investimentoEstimado = investimento,
+            retornoEstimado = retorno,
             economiaEstimada = 0.0,
             ganhoProdutividade = 0.0,
             progressoPercentual = 0,
@@ -111,6 +111,34 @@ class AppRepository {
         if (index != -1) {
             val project = currentList[index]
             currentList[index] = project.copy(progressoPercentual = progresso, status = status, etapaAtual = etapa)
+            _projects.value = currentList
+        }
+    }
+
+    fun updateProject(
+        projectId: String,
+        responsavelNome: String,
+        area: String,
+        dataInicio: String,
+        dataFim: String,
+        investimento: Double,
+        retorno: Double,
+        status: ProjectStatus
+    ) {
+        val currentList = _projects.value.toMutableList()
+        val index = currentList.indexOfFirst { it.id == projectId }
+        if (index != -1) {
+            val project = currentList[index]
+            currentList[index] = project.copy(
+                responsavelNome = responsavelNome,
+                areaResponsavel = area,
+                dataInicioPrevista = dataInicio,
+                dataFimPrevista = dataFim,
+                investimentoEstimado = investimento,
+                retornoEstimado = retorno,
+                status = status,
+                categoria = area
+            )
             _projects.value = currentList
         }
     }

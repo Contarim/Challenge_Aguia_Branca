@@ -146,7 +146,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.weight(1f))
             
             Text(
-                text = "Contas de teste:\noperador@gab.com | gestor@gab.com | lider@gab.com\n(Senha: 123456)",
+                text = "Contas de teste:\noperador@gab.com | gestor@gab.com | lider@gab.com\n(Senha: 123)",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

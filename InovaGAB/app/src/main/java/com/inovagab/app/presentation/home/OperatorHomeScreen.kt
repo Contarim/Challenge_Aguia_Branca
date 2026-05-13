@@ -25,6 +25,7 @@ import com.inovagab.app.data.model.Idea
 import com.inovagab.app.data.model.IdeaStatus
 import com.inovagab.app.data.model.StrategicGuideline
 import com.inovagab.app.presentation.AppViewModelFactory
+import com.inovagab.app.ui.components.*
 import com.inovagab.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,8 +120,7 @@ fun OperatorIdeasContent(myIdeas: List<Idea>) {
             GamificationEnterpriseCard(myIdeas)
             Spacer(modifier = Modifier.height(24.dp))
             
-            Text("Pipeline de Inovação", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
-            Text("Acompanhe o estágio de cada submissão", style = MaterialTheme.typography.labelMedium, color = GabTextSecondary)
+            SectionHeader("Pipeline de Inovação", "Acompanhe o estágio de cada submissão")
             Spacer(modifier = Modifier.height(16.dp))
             
             PipelineOverview(myIdeas)
@@ -131,140 +131,13 @@ fun OperatorIdeasContent(myIdeas: List<Idea>) {
         if (myIdeas.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Inbox, contentDescription = null, tint = GabSecondary, modifier = Modifier.size(48.dp))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Sem ideias cadastradas", color = GabTextSecondary, style = MaterialTheme.typography.bodyMedium)
-                    }
+                    EmptyState("Nenhuma Ideia", "Sem ideias cadastradas", Icons.Default.Inbox)
                 }
             }
         } else {
             items(myIdeas) { idea ->
-                CompactEnterpriseCard(idea)
+                IdeaCard(idea = idea)
                 Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun PipelineOverview(ideas: List<Idea>) {
-    val cadastrada = ideas.count { it.status == IdeaStatus.CADASTRADA }
-    val emAnalise = ideas.count { it.status == IdeaStatus.EM_ANALISE || it.status == IdeaStatus.PRIORIZADA }
-    val aprovada = ideas.count { it.status == IdeaStatus.APROVADA || it.status == IdeaStatus.CONVERTIDA_PROJETO }
-
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        PipelineStage("Fila", cadastrada, StatusNeutral)
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GabSecondary, modifier = Modifier.align(Alignment.CenterVertically))
-        PipelineStage("Análise", emAnalise, StatusWarning)
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GabSecondary, modifier = Modifier.align(Alignment.CenterVertically))
-        PipelineStage("Sucesso", aprovada, StatusSuccess)
-    }
-}
-
-@Composable
-fun PipelineStage(label: String, count: Int, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(color.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-            Text("$count", fontWeight = FontWeight.Bold, color = color)
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
-    }
-}
-
-@Composable
-fun GamificationEnterpriseCard(myIdeas: List<Idea>) {
-    val approved = myIdeas.count { it.status == IdeaStatus.APROVADA || it.status == IdeaStatus.CONVERTIDA_PROJETO }
-    val points = (myIdeas.size * 10) + (approved * 50)
-    
-    val (badgeName, nextLevelPoints, progress) = when {
-        points < 100 -> Triple("Semente da Inovação", 100, points / 100f)
-        points < 300 -> Triple("Agente de Mudança", 300, (points - 100) / 200f)
-        else -> Triple("Visão Águia", points, 1f)
-    }
-    
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = GabDarkBlue),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.WorkspacePremium, contentDescription = "Badge", tint = StatusWarning, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(badgeName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
-                }
-                Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(GabAccent.copy(alpha = 0.2f)).padding(horizontal = 8.dp, vertical = 4.dp)) {
-                    Text("$points XP", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GabAccent)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            LinearProgressIndicator(
-                progress = progress,
-                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                color = StatusSuccess,
-                trackColor = Color.White.copy(alpha = 0.1f)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(if(points < 300) "Faltam ${nextLevelPoints - points} XP para o próximo nível" else "Nível Máximo Alcançado!", style = MaterialTheme.typography.labelSmall, color = GabSecondary)
-        }
-    }
-}
-
-@Composable
-fun CompactEnterpriseCard(idea: Idea) {
-    val (statusBg, statusColor) = when (idea.status) {
-        IdeaStatus.APROVADA, IdeaStatus.CONVERTIDA_PROJETO -> StatusSuccessBg to StatusSuccess
-        IdeaStatus.EM_ANALISE, IdeaStatus.PRIORIZADA -> StatusWarningBg to StatusWarning
-        IdeaStatus.REPROVADA -> StatusErrorBg to StatusError
-        else -> StatusNeutralBg to StatusNeutral
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = GabSurface),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, GabSecondary)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row {
-                    idea.tags.forEach { tag ->
-                        Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(StatusInfoBg).padding(horizontal = 6.dp, vertical = 2.dp).padding(end = 4.dp)) {
-                            Text(tag, style = MaterialTheme.typography.labelSmall, color = StatusInfo, fontWeight = FontWeight.SemiBold)
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                    com.inovagab.app.ui.components.PriorityChip(idea.prioridade)
-                }
-                Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(statusBg).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                    Text(idea.status.label, style = MaterialTheme.typography.labelSmall, color = statusColor, fontWeight = FontWeight.Bold)
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(idea.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(idea.descricao, style = MaterialTheme.typography.bodySmall, color = GabTextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = GabSecondary, thickness = 0.5.dp)
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DateRange, contentDescription = null, tint = GabTextSecondary, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(idea.dataCriacao, style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.TrendingUp, contentDescription = null, tint = StatusSuccess, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(idea.impactoEsperado, style = MaterialTheme.typography.labelSmall, color = StatusSuccess, fontWeight = FontWeight.SemiBold)
-                }
             }
         }
     }
@@ -354,4 +227,71 @@ fun NewIdeaDialog(
             }
         }
     )
+}
+
+@Composable
+fun PipelineOverview(ideas: List<Idea>) {
+    val cadastrada = ideas.count { it.status == IdeaStatus.CADASTRADA }
+    val emAnalise = ideas.count { it.status == IdeaStatus.EM_ANALISE || it.status == IdeaStatus.PRIORIZADA }
+    val aprovada = ideas.count { it.status == IdeaStatus.APROVADA || it.status == IdeaStatus.CONVERTIDA_PROJETO }
+
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        PipelineStage("Fila", cadastrada, StatusNeutral)
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GabSecondary, modifier = Modifier.align(Alignment.CenterVertically))
+        PipelineStage("Análise", emAnalise, StatusWarning)
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GabSecondary, modifier = Modifier.align(Alignment.CenterVertically))
+        PipelineStage("Sucesso", aprovada, StatusSuccess)
+    }
+}
+
+@Composable
+fun PipelineStage(label: String, count: Int, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(color.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+            Text("$count", fontWeight = FontWeight.Bold, color = color)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
+    }
+}
+
+@Composable
+fun GamificationEnterpriseCard(myIdeas: List<Idea>) {
+    val approved = myIdeas.count { it.status == IdeaStatus.APROVADA || it.status == IdeaStatus.CONVERTIDA_PROJETO }
+    val points = (myIdeas.size * 10) + (approved * 50)
+    
+    val (badgeName, nextLevelPoints, progress) = when {
+        points < 100 -> Triple("Semente da Inovação", 100, points / 100f)
+        points < 300 -> Triple("Agente de Mudança", 300, (points - 100) / 200f)
+        else -> Triple("Visão Águia", points, 1f)
+    }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = GabDarkBlue),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.WorkspacePremium, contentDescription = "Badge", tint = StatusWarning, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(badgeName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+                Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(GabAccent.copy(alpha = 0.2f)).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                    Text("$points XP", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GabAccent)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            LinearProgressIndicator(
+                progress = progress,
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                color = StatusSuccess,
+                trackColor = Color.White.copy(alpha = 0.1f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(if(points < 300) "Faltam ${nextLevelPoints - points} XP para o próximo nível" else "Nível Máximo Alcançado!", style = MaterialTheme.typography.labelSmall, color = GabSecondary)
+        }
+    }
 }

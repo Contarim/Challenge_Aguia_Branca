@@ -40,8 +40,8 @@ data class Project(
     val dataFimPrevista: String,
     val dataInicioReal: String? = null,
     val dataFimReal: String? = null,
-    val investimento: Double = 0.0,
-    val retornoFinanceiro: Double = 0.0,
+    val investimentoEstimado: Double = 0.0,
+    val retornoEstimado: Double = 0.0,
     val economiaEstimada: Double = 0.0,
     val ganhoProdutividade: Double = 0.0,
     val progressoPercentual: Int = 0,
@@ -56,7 +56,19 @@ data class Project(
         get() = DateUtils.calculateDaysRemaining(dataFimPrevista)
         
     val lucroEstimado: Double
-        get() = retornoFinanceiro - investimento
+        get() = retornoEstimado - investimentoEstimado
+
+    val roi: Double
+        get() = if (investimentoEstimado > 0) ((retornoEstimado - investimentoEstimado) / investimentoEstimado) * 100 else 0.0
+
+    val percentualPrazoConsumido: Double
+        get() {
+            val diasDecorridos = DateUtils.daysBetween(dataInicioPrevista, DateUtils.getCurrentDate())
+            val prazoTotal = prazoEmDias
+            return if (prazoTotal > 0) {
+                (diasDecorridos.toDouble() / prazoTotal) * 100
+            } else 0.0
+        }
 
     val statusPrazo: StatusPrazo
         get() {

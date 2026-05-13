@@ -20,6 +20,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import com.inovagab.app.utils.CurrencyVisualTransformation
+import com.inovagab.app.utils.DateVisualTransformation
+import com.inovagab.app.utils.FormatUtils
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.inovagab.app.data.model.Project
 import com.inovagab.app.data.model.StatusPrazo
@@ -36,7 +45,7 @@ fun LeaderHomeScreen(
     val user by viewModel.currentUser.collectAsState(initial = null)
     val projects by viewModel.projects.collectAsState(initial = emptyList())
     var selectedTab by remember { mutableStateOf(0) }
-    var projectDetailsToView by remember { mutableStateOf<Project?>(null) }
+    var projectToEdit by remember { mutableStateOf<Project?>(null) }
 
     Scaffold(
         topBar = {
@@ -84,25 +93,31 @@ fun LeaderHomeScreen(
             if (selectedTab == 0) {
                 ExecutiveDashboardV2(projects)
             } else {
-                PortfolioV2Content(projects) { projectDetailsToView = it }
+                PortfolioV2Content(projects) { projectToEdit = it }
             }
         }
 
-        projectDetailsToView?.let { proj ->
-            ProjectDetailsDialog(proj) { projectDetailsToView = null }
+        projectToEdit?.let { proj ->
+            EditProjectDialog(
+                project = proj,
+                onDismiss = { projectToEdit = null },
+                onSave = { pId, resp, area, inicio, fim, inv, ret, status ->
+                    viewModel.updateProject(pId, resp, area, inicio, fim, inv, ret, status)
+                    projectToEdit = null
+                }
+            )
         }
     }
 }
 
 @Composable
 fun ExecutiveDashboardV2(projects: List<Project>) {
-    val totalInvest = projects.sumOf { it.investimento }
-    val totalRetorno = projects.sumOf { it.retornoFinanceiro }
+    val totalInvest = projects.sumOf { it.investimentoEstimado }
+    val totalRetorno = projects.sumOf { it.retornoEstimado }
     val lucroReal = totalRetorno - totalInvest
     val roiGlobal = if (totalInvest > 0) ((totalRetorno - totalInvest) / totalInvest) * 100 else 0.0
 
     val atrasados = projects.count { it.statusPrazo == StatusPrazo.ATRASADO }
-    val risco = projects.count { it.risco == com.inovagab.app.data.model.Risk.CRITICO || it.risco == com.inovagab.app.data.model.Risk.ALTO }
 
     LazyColumn(contentPadding = PaddingValues(16.dp), modifier = Modifier.fillMaxSize()) {
         item {
@@ -121,10 +136,10 @@ fun ExecutiveDashboardV2(projects: List<Project>) {
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(modifier = Modifier.weight(1f)) {
-                    KPICard("Lucro Esperado", "R$ ${lucroReal.toInt() / 1000}k", Icons.Default.AttachMoney, if(lucroReal >= 0) StatusSuccess else StatusError, "")
+                    KPICard("Lucro Esperado", "R$ ${lucroReal.toInt() / 1000}k", Icons.Default.AttachMoney, if(lucroReal >= 0) StatusSuccess else StatusError)
                 }
                 Box(modifier = Modifier.weight(1f)) {
-                    KPICard("ROI Global", "${String.format("%.1f", roiGlobal)}%", Icons.Default.TrendingUp, if(roiGlobal >= 0) StatusSuccess else StatusError, "")
+                    KPICard("ROI Global", "${String.format("%.1f", roiGlobal)}%", Icons.Default.TrendingUp, if(roiGlobal >= 0) StatusSuccess else StatusError)
                 }
             }
 
@@ -134,10 +149,10 @@ fun ExecutiveDashboardV2(projects: List<Project>) {
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(modifier = Modifier.weight(1f)) {
-                    KPICard("No Prazo", "${projects.count { it.statusPrazo == StatusPrazo.NO_PRAZO }}", Icons.Default.CheckCircle, StatusSuccess, "")
+                    KPICard("No Prazo", "${projects.count { it.statusPrazo == StatusPrazo.NO_PRAZO }}", Icons.Default.CheckCircle, StatusSuccess)
                 }
                 Box(modifier = Modifier.weight(1f)) {
-                    KPICard("Risco/Venc.", "${projects.count { it.statusPrazo == StatusPrazo.PROXIMO_VENCIMENTO }}", Icons.Default.Schedule, StatusWarning, "")
+                    KPICard("Risco/Venc.", "${projects.count { it.statusPrazo == StatusPrazo.PROXIMO_VENCIMENTO }}", Icons.Default.Schedule, StatusWarning)
                 }
             }
 
@@ -158,7 +173,7 @@ fun ExecutiveDashboardV2(projects: List<Project>) {
                         Text(proj.titulo, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = GabTextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(proj.areaResponsavel, style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
                     }
-                    val roi = if(proj.investimento>0) (proj.lucroEstimado/proj.investimento)*100 else 0.0
+                    val roi = if(proj.investimentoEstimado>0) (proj.lucroEstimado/proj.investimentoEstimado)*100 else 0.0
                     Text("ROI: ${String.format("%.1f", roi)}%", color = StatusSuccess, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
                 }
             }
@@ -167,7 +182,7 @@ fun ExecutiveDashboardV2(projects: List<Project>) {
 }
 
 @Composable
-fun KPICard(title: String, value: String, icon: ImageVector, color: Color, comparison: String) {
+fun KPICard(title: String, value: String, icon: ImageVector, color: Color) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -196,49 +211,101 @@ fun PortfolioV2Content(projects: List<Project>, onProjectClick: (Project) -> Uni
         }
 
         items(projects) { project ->
-            Box(modifier = Modifier.clickable { onProjectClick(project) }) {
-                EnterpriseProjectCard(project)
-            }
+            ProjectCard(project = project, onClick = { onProjectClick(project) })
             Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
 
 @Composable
-fun ProjectDetailsDialog(project: Project, onDismiss: () -> Unit) {
+fun EditProjectDialog(
+    project: Project,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String, String, String, Double, Double, com.inovagab.app.data.model.ProjectStatus) -> Unit
+) {
+    var responsavel by remember { mutableStateOf(project.responsavelNome) }
+    var area by remember { mutableStateOf(project.areaResponsavel) }
+    var dataInicio by remember { mutableStateOf(FormatUtils.removeNonDigits(project.dataInicioPrevista)) }
+    var dataFim by remember { mutableStateOf(FormatUtils.removeNonDigits(project.dataFimPrevista)) }
+    var investStr by remember { mutableStateOf(FormatUtils.doubleToCentsString(project.investimentoEstimado)) }
+    var retornoStr by remember { mutableStateOf(FormatUtils.doubleToCentsString(project.retornoEstimado)) }
+    var status by remember { mutableStateOf(project.status) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = GabSurface,
-        title = { Text(project.titulo, fontWeight = FontWeight.Bold) },
+        title = { Text("Editar Projeto", fontWeight = FontWeight.Bold) },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(value = responsavel, onValueChange = { responsavel = it }, label = { Text("Responsável") }, modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(value = area, onValueChange = { area = it }, label = { Text("Grupo / Área") }, modifier = Modifier.fillMaxWidth())
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatusPrazoChip(project.statusPrazo)
-                    RiskChip(project.risco)
+                    OutlinedTextField(
+                        value = dataInicio, 
+                        onValueChange = { dataInicio = FormatUtils.filterDateInput(it) }, 
+                        label = { Text("Início") }, 
+                        modifier = Modifier.weight(1f),
+                        visualTransformation = DateVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = dataFim, 
+                        onValueChange = { dataFim = FormatUtils.filterDateInput(it) }, 
+                        label = { Text("Fim") }, 
+                        modifier = Modifier.weight(1f),
+                        visualTransformation = DateVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = investStr, 
+                        onValueChange = { investStr = FormatUtils.removeNonDigits(it) }, 
+                        label = { Text("CAPEX") }, 
+                        modifier = Modifier.weight(1f),
+                        visualTransformation = CurrencyVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = retornoStr, 
+                        onValueChange = { retornoStr = FormatUtils.removeNonDigits(it) }, 
+                        label = { Text("Retorno") }, 
+                        modifier = Modifier.weight(1f),
+                        visualTransformation = CurrencyVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Responsável: ${project.responsavelNome} (${project.areaResponsavel})", style = MaterialTheme.typography.labelMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Divider()
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Cronograma", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-                Text("Início Previsto: ${project.dataInicioPrevista}", style = MaterialTheme.typography.bodySmall)
-                Text("Fim Previsto: ${project.dataFimPrevista}", style = MaterialTheme.typography.bodySmall)
-                Text("Prazo em Dias: ${project.prazoEmDias}", style = MaterialTheme.typography.bodySmall)
-                Text("Dias Restantes: ${project.diasRestantes}", style = MaterialTheme.typography.bodySmall, color = if(project.diasRestantes < 0) StatusError else GabTextPrimary)
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                Divider()
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Financeiro", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-                Text("Investimento: R$ ${project.investimento}", style = MaterialTheme.typography.bodySmall)
-                Text("Retorno (Lucro): R$ ${project.lucroEstimado}", style = MaterialTheme.typography.bodySmall, color = StatusSuccess)
+                Text("Status do Projeto", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                LazyRow {
+                    items(com.inovagab.app.data.model.ProjectStatus.values()) { s ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = status == s, onClick = { status = s })
+                            Text(s.label, fontSize = 12.sp)
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = GabDarkBlue)) {
-                Text("Fechar")
+            Button(
+                onClick = { 
+                    val inv = FormatUtils.formatToDouble(investStr)
+                    val ret = FormatUtils.formatToDouble(retornoStr)
+                    val fmtInicio = FormatUtils.formatDateString(dataInicio)
+                    val fmtFim = FormatUtils.formatDateString(dataFim)
+                    onSave(project.id, responsavel, area, fmtInicio, fmtFim, inv, ret, status) 
+                }, 
+                colors = ButtonDefaults.buttonColors(containerColor = GabDarkBlue)
+            ) {
+                Text("Salvar")
             }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = GabTextSecondary) }
         }
     )
 }

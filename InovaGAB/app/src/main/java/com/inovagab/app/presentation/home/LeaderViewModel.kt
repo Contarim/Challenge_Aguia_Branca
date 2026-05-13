@@ -15,4 +15,17 @@ class LeaderViewModel(private val repository: AppRepository) : ViewModel() {
     fun addGuideline(titulo: String, desc: String, cat: String) {
         repository.addGuideline(titulo, desc, cat)
     }
+
+    fun updateProject(
+        projectId: String,
+        responsavelNome: String,
+        area: String,
+        dataInicio: String,
+        dataFim: String,
+        investimento: Double,
+        retorno: Double,
+        status: com.inovagab.app.data.model.ProjectStatus
+    ) {
+        repository.updateProject(projectId, responsavelNome, area, dataInicio, dataFim, investimento, retorno, status)
+    }
 }

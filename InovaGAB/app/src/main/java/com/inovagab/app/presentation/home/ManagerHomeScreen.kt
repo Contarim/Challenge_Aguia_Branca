@@ -22,6 +22,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import com.inovagab.app.utils.DateVisualTransformation
+import com.inovagab.app.utils.FormatUtils
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.inovagab.app.data.model.*
 import com.inovagab.app.presentation.AppViewModelFactory
@@ -94,7 +98,6 @@ fun ManagerHomeScreen(
 
         ideaToApprove?.let { idea ->
             ApproveAndCreateProjectDialog(
-                idea = idea,
                 onDismiss = { ideaToApprove = null },
                 onConfirm = { prioridade, risco, area, dataInicio, dataFim, invest, retorno ->
                     viewModel.approveIdeaAndCreateProject(
@@ -141,56 +144,8 @@ fun ManagerIdeasFunnel(ideas: List<Idea>, onApproveClick: (Idea) -> Unit) {
             }
         } else {
             items(filteredIdeas) { idea ->
-                CuratorshipIdeaCard(idea, onApproveClick)
+                IdeaCard(idea = idea, onClick = { onApproveClick(idea) })
                 Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun CuratorshipIdeaCard(idea: Idea, onApproveClick: (Idea) -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = GabSurface),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, GabSecondary)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(GabSecondary), contentAlignment = Alignment.Center) {
-                        Text(idea.autorNome.take(1), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = GabTextPrimary)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(idea.autorNome, style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
-                }
-                Text(idea.dataCriacao, style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(idea.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(idea.descricao, style = MaterialTheme.typography.bodySmall, color = GabTextSecondary)
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row {
-                    idea.tags.forEach { tag ->
-                        Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(StatusInfoBg).padding(horizontal = 6.dp, vertical = 2.dp).padding(end = 4.dp)) {
-                            Text(tag, style = MaterialTheme.typography.labelSmall, color = StatusInfo, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-                Button(
-                    onClick = { onApproveClick(idea) },
-                    colors = ButtonDefaults.buttonColors(containerColor = GabAccent),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text("Avaliar", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color.White)
-                }
             }
         }
     }
@@ -212,7 +167,7 @@ fun ManagerProjectsContent(projects: List<Project>) {
             }
         } else {
             items(projects.sortedBy { it.statusPrazo.ordinal }) { project ->
-                EnterpriseProjectCard(project)
+                ProjectCard(project = project, onClick = {})
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
@@ -220,54 +175,7 @@ fun ManagerProjectsContent(projects: List<Project>) {
 }
 
 @Composable
-fun EnterpriseProjectCard(project: Project) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = GabSurface),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, GabSecondary)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                StatusPrazoChip(project.statusPrazo)
-                PriorityChip(project.prioridade)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(project.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(project.areaResponsavel, style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("Prazo Fim", style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
-                    Text(project.dataFimPrevista, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Progresso", style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
-                    Text("${project.progressoPercentual}%", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("Dias Restantes", style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
-                    Text(if(project.diasRestantes < 0) "Atrasado" else "${project.diasRestantes} dias", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = if(project.diasRestantes < 0) StatusError else GabTextPrimary)
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            LinearProgressIndicator(
-                progress = project.progressoPercentual / 100f,
-                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                color = if (project.progressoPercentual == 100) StatusSuccess else GabAccent,
-                trackColor = GabSecondary
-            )
-        }
-    }
-}
-
-@Composable
 fun ApproveAndCreateProjectDialog(
-    idea: Idea, 
     onDismiss: () -> Unit, 
     onConfirm: (Priority, Risk, String, String, String, Double, Double) -> Unit
 ) {
@@ -275,12 +183,9 @@ fun ApproveAndCreateProjectDialog(
     var risco by remember { mutableStateOf(Risk.MEDIO) }
     var area by remember { mutableStateOf("Operações") }
     
-    // Simulação simplificada de datas como String para não quebrar API 24
-    var dataInicio by remember { mutableStateOf(DateUtils.getCurrentDate()) }
-    var dataFim by remember { mutableStateOf(DateUtils.addDaysToCurrentDate(30)) }
-    
-    var investStr by remember { mutableStateOf("0") }
-    var retornoStr by remember { mutableStateOf("0") }
+    // Armazenamos apenas os dígitos numéricos no estado
+    var dataInicio by remember { mutableStateOf(FormatUtils.removeNonDigits(DateUtils.getCurrentDate())) }
+    var dataFim by remember { mutableStateOf(FormatUtils.removeNonDigits(DateUtils.addDaysToCurrentDate(30))) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -323,23 +228,32 @@ fun ApproveAndCreateProjectDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = dataInicio, onValueChange = { dataInicio = it }, label = { Text("Início (dd/MM/yyyy)") }, modifier = Modifier.weight(1f))
-                    OutlinedTextField(value = dataFim, onValueChange = { dataFim = it }, label = { Text("Fim (dd/MM/yyyy)") }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(
+                        value = dataInicio, 
+                        onValueChange = { dataInicio = FormatUtils.filterDateInput(it) }, 
+                        label = { Text("Início") }, 
+                        modifier = Modifier.weight(1f),
+                        visualTransformation = DateVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = dataFim, 
+                        onValueChange = { dataFim = FormatUtils.filterDateInput(it) }, 
+                        label = { Text("Fim") }, 
+                        modifier = Modifier.weight(1f),
+                        visualTransformation = DateVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = investStr, onValueChange = { investStr = it }, label = { Text("CAPEX/OPEX R$") }, modifier = Modifier.weight(1f))
-                    OutlinedTextField(value = retornoStr, onValueChange = { retornoStr = it }, label = { Text("Retorno R$") }, modifier = Modifier.weight(1f))
-                }
             }
         },
         confirmButton = {
             Button(
                 onClick = { 
-                    val inv = investStr.toDoubleOrNull() ?: 0.0
-                    val ret = retornoStr.toDoubleOrNull() ?: 0.0
-                    onConfirm(prioridade, risco, area, dataInicio, dataFim, inv, ret) 
+                    val fmtInicio = FormatUtils.formatDateString(dataInicio)
+                    val fmtFim = FormatUtils.formatDateString(dataFim)
+                    onConfirm(prioridade, risco, area, fmtInicio, fmtFim, 0.0, 0.0) 
                 }, 
                 colors = ButtonDefaults.buttonColors(containerColor = StatusSuccess),
                 shape = RoundedCornerShape(8.dp)
