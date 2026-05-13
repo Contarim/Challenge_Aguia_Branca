@@ -7,7 +7,7 @@ O InovaGAB é um protótipo nativo para Android construído como um MVP corporat
 > **O que o App NÃO TEM nesta versão:**
 > - Não possui backend, API ou Firebase.
 > - Não possui banco de dados persistente (SQLite/Room). Se fechar o app, as novas ideias não são salvas no disco.
-> - Não possui autenticação real (senhas não são criptografadas, login é feito varrendo uma lista mockada em memória).
+> - Não possui autenticação real (senhas não são criptografadas, login é feito varrendo uma lista mockada em memória). **Senha padrão para todos os usuários: 123**.
 
 **O que o App TEM nesta versão:**
 - Uma interface de altíssimo nível (Enterprise) densa e baseada em softwares de mercado (como Jira e Power BI).
@@ -22,6 +22,7 @@ O InovaGAB é um protótipo nativo para Android construído como um MVP corporat
 - **Gerenciamento de Estado**: StateFlow e Coroutines.
 - **Gráficos**: Uso 100% nativo de APIs do Compose (Canvas) sem bibliotecas externas.
 - **Manipulação de Data**: `java.util.Calendar` e `SimpleDateFormat` na classe *DateUtils* garantindo retrocompatibilidade (API Mínima 24).
+- **UX & Máscaras de Input**: Implementação de `VisualTransformation` customizada para máscaras de **Data (dd/MM/yyyy)** e **Moeda (R$)** com validação de entrada em tempo real.
 - **SDK Alvo**: API 34 (Android 14) / **SDK Mínimo**: API 24 (Android 7.0).
 
 ## 3. Arquitetura de Dados (As Novas Entidades de V2)
@@ -43,16 +44,21 @@ O aplicativo evoluiu consideravelmente sua arquitetura de dados (SaaS-like):
 
 ### 4.2. Gestor (Curadoria Tática)
 - **Funil de Ideias**: O gestor visualiza as ideias com `FilterChips` dinâmicos por categoria.
-- **Conversão Ideia para Projeto (Seamless Flow)**: O botão "Avaliar Ideia" não apenas muda um status. Ele abre o Modal de Aprovação Tática exigindo a inserção imediata da *Data de Início*, *Data de Fim*, *Área Responsável*, *CAPEX (Investimento)* e grau de *Risco*. Só assim a Ideia converte em um Projeto Ativo no sistema.
-- **Gestão de Projetos**: Os projetos em andamento aparecem numa lista densa de acompanhamento com barras de progresso, `StatusPrazoChip` (indicador vermelho caso a data de fim esteja estourada) e chips de Risco.
+- **Conversão Ideia para Projeto (Seamless Flow)**: O botão "Avaliar Ideia" abre o Modal de Aprovação Tática. Seguindo a separação de responsabilidades, o gestor foca no **Planejamento Operacional**: define a *Prioridade (Baixa a Crítica)*, o *Risco*, a *Área Responsável* e as *Datas Estimadas*.
+- **Omissão Financeira**: Seguindo as novas regras de negócio, o gestor não visualiza nem preenche campos de CAPEX ou Retorno, que são exclusivos da liderança.
+- **Gestão de Projetos**: Os projetos em andamento aparecem numa lista densa de acompanhamento com barras de progresso, `StatusPrazoChip` e chips de Risco.
 
 ### 4.3. Líder (Dashboard C-Level)
 O Dashboard executivo foi aprimorado para foco em SLA e retorno de investimento:
 - **Alertas Vivos**: Componente nativo detecta se no repositório há Projetos com status "Atrasado". Caso positivo, gera um Header vermelho na tela solicitando atenção executiva.
-- **KPIs Financeiros**: O app calcula ativamente as somas do portfólio apontando o Lucro Estimado e o % de ROI Global da Inovação da empresa.
+- **KPIs Financeiros**: O app calcula ativamente as somas do portfólio apontando o Lucro Estimado e o % de ROI Global da Inovação da empresa em tempo real.
 - **Indicadores de Prazo**: Card apontando exatamente a divisão entre projetos No Prazo vs Vencendo (Risco).
 - **Top Projetos por ROI**: Lista inteligente via algoritmo `.sortedByDescending` que destaca apenas o top 3 do portfólio.
-- **Aba de Portfólio Detalhado**: Listagem de projetos *clicáveis*. Ao selecionar, o Líder acessa o modal com o raio-x total dos dias restantes e métricas sensíveis.
+- **Gestão e Edição de Portfólio (Full Control)**: O Líder agora possui um **Modal de Edição Completo**. Ao clicar em qualquer projeto, ele pode ajustar:
+  - **Dados Financeiros**: Inserir e alterar CAPEX (Investimento) e Retorno Estimado.
+  - **Cronograma**: Reajustar datas de início e fim.
+  - **Status do Projeto**: Alterar entre *Planejado, Em andamento, Pausado, Concluído ou Cancelado*.
+  - **Responsáveis**: Alterar o nome do responsável e o grupo/área.
 
 ## 5. Dinâmica de Dados Mockados Inteligentes
 Para garantir que o app não perca a coerência dos prazos e status durante apresentações demoradas, os dados de teste na `MockData.kt` não foram criados com datas estáticas ("25/08/2026").
@@ -63,4 +69,5 @@ Isso garante que sempre que você abrir o app para demonstrar a plataforma, as t
 ## 6. Solução de Problemas de Compilação
 - Certifique-se de realizar o *Sync* do Gradle na pasta raiz `InovaGAB`.
 - Evite atualizar para Gradle Plugin 8.5+ sem antes validar dependências Compose, o projeto foi arquitetado e estabilizado na versão **8.4** do wrapper (`gradle/wrapper/gradle-wrapper.properties`).
+- **Conflitos de Material 3**: O projeto utiliza a BOM do Compose e a versão estável `1.1.2` do Material 3 para evitar erros de classes duplicadas (`Duplicate class androidx.compose.material3.tokens.TypographyTokensKt`). Não force versões superiores a `1.2.0` sem migrar todo o SDK.
 - Se houver lentidão na compilação, o `gradle.properties` original com `-Xmx2048m` já está injetado no repositório para evitar *GC Overhead limit exceeded* da JVM.
