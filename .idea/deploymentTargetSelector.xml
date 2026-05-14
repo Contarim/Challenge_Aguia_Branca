@@ -2,16 +2,16 @@
 <project version="4">
   <component name="deploymentTargetSelector">
     <selectionStates>
-      <SelectionState runConfigName="InovaGAB.app.unitTest">
+      <SelectionState runConfigName="ConectaGAB.app.unitTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="InovaGAB.app.main">
+      <SelectionState runConfigName="ConectaGAB.app.main">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="InovaGAB.app">
+      <SelectionState runConfigName="ConectaGAB.app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="InovaGAB.app.androidTest">
+      <SelectionState runConfigName="ConectaGAB.app.androidTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

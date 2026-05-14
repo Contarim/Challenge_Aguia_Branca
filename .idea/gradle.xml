@@ -4,12 +4,12 @@
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
         <option name="testRunner" value="CHOOSE_PER_TEST" />
-        <option name="externalProjectPath" value="$PROJECT_DIR$/InovaGAB" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/ConectaGAB" />
         <option name="gradleJvm" value="#GRADLE_LOCAL_JAVA_HOME" />
         <option name="modules">
           <set>
-            <option value="$PROJECT_DIR$/InovaGAB" />
-            <option value="$PROJECT_DIR$/InovaGAB/app" />
+            <option value="$PROJECT_DIR$/ConectaGAB" />
+            <option value="$PROJECT_DIR$/ConectaGAB/app" />
           </set>
         </option>
         <option name="resolveExternalAnnotations" value="true" />

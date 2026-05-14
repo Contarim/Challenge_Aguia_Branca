@@ -19,9 +19,9 @@ local.properties
 *.pyc
 
 # Project specific
-InovaGAB_Sprint1.zip
-InovaGAB/build/
-InovaGAB/app/build/
-InovaGAB/.gradle/
-InovaGAB/.idea/
-InovaGAB/local.properties
+ConectaGAB_Sprint1.zip
+ConectaGAB/build/
+ConectaGAB/app/build/
+ConectaGAB/.gradle/
+ConectaGAB/.idea/
+ConectaGAB/local.properties
