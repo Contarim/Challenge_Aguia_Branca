@@ -42,14 +42,16 @@ fun ManagerHomeScreen(
     val user by viewModel.currentUser.collectAsState(initial = null)
     val ideas by viewModel.ideas.collectAsState(initial = emptyList())
     val projects by viewModel.projects.collectAsState(initial = emptyList())
-    
+    val guidelines by viewModel.guidelines.collectAsState(initial = emptyList())
+
     var selectedTab by remember { mutableStateOf(0) }
     var ideaToApprove by remember { mutableStateOf<Idea?>(null) }
+    var projectToEdit by remember { mutableStateOf<Project?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(GabDarkBlue), contentAlignment = Alignment.Center) {
                             Text(user?.nome?.take(1) ?: "M", color = Color.White, fontWeight = FontWeight.Bold)
@@ -85,17 +87,29 @@ fun ManagerHomeScreen(
                     label = { Text("Projetos") },
                     colors = NavigationBarItemDefaults.colors(indicatorColor = StatusInfoBg, selectedIconColor = GabAccent, selectedTextColor = GabAccent)
                 )
+                NavigationBarItem(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    icon = { Icon(Icons.Default.Map, contentDescription = null) },
+                    label = { Text("Diretrizes") },
+                    colors = NavigationBarItemDefaults.colors(indicatorColor = StatusInfoBg, selectedIconColor = GabAccent, selectedTextColor = GabAccent)
+                )
             }
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize().background(GabBackground)) {
-            if (selectedTab == 0) {
-                ManagerIdeasFunnel(ideas, onApproveClick = { ideaToApprove = it })
-            } else {
-                ManagerProjectsContent(projects)
+            when (selectedTab) {
+                0 -> ManagerIdeasFunnel(
+                    ideas = ideas,
+                    onPrioritizeClick = { viewModel.prioritizeIdea(it.id) },
+                    onApproveClick = { ideaToApprove = it }
+                )
+                1 -> ManagerProjectsContent(projects, onProjectClick = { projectToEdit = it })
+                2 -> ManagerGuidelinesContent(guidelines)
             }
         }
 
+        // Dialog de aprovação
         ideaToApprove?.let { idea ->
             ApproveAndCreateProjectDialog(
                 onDismiss = { ideaToApprove = null },
@@ -107,13 +121,30 @@ fun ManagerHomeScreen(
                 }
             )
         }
+
+        // Dialog de edição de projeto
+        projectToEdit?.let { proj ->
+            SharedEditProjectDialog(
+                project = proj,
+                onDismiss = { projectToEdit = null },
+                onSave = { pId, resp, area, inicio, fim, inv, ret, status, progresso, etapa, economia, produtividade ->
+                    viewModel.updateProject(pId, resp, area, inicio, fim, inv, ret, status, progresso, etapa, economia, produtividade)
+                    projectToEdit = null
+                }
+            )
+        }
     }
 }
 
+// ── Funil de Ideias ───────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManagerIdeasFunnel(ideas: List<Idea>, onApproveClick: (Idea) -> Unit) {
-    val pendingIdeas = ideas.filter { it.status == IdeaStatus.CADASTRADA || it.status == IdeaStatus.EM_ANALISE }
+fun ManagerIdeasFunnel(
+    ideas: List<Idea>,
+    onPrioritizeClick: (Idea) -> Unit,
+    onApproveClick: (Idea) -> Unit
+) {
+    val pendingIdeas = ideas.filter { it.status == IdeaStatus.CADASTRADA || it.status == IdeaStatus.EM_ANALISE || it.status == IdeaStatus.PRIORIZADA }
     var selectedCategory by remember { mutableStateOf<String?>("Todas") }
     val categories = listOf("Todas") + pendingIdeas.flatMap { it.tags }.distinct()
     val filteredIdeas = if (selectedCategory == "Todas") pendingIdeas else pendingIdeas.filter { it.tags.contains(selectedCategory) }
@@ -122,7 +153,6 @@ fun ManagerIdeasFunnel(ideas: List<Idea>, onApproveClick: (Idea) -> Unit) {
         item {
             Text("Funil de Triagem", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
             Spacer(modifier = Modifier.height(16.dp))
-            
             LazyRow(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 items(categories) { cat ->
                     FilterChip(
@@ -139,12 +169,16 @@ fun ManagerIdeasFunnel(ideas: List<Idea>, onApproveClick: (Idea) -> Unit) {
         if (filteredIdeas.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Text("Nenhuma ideia nesta categoria.", color = GabTextSecondary)
+                    EmptyState("Nenhuma ideia pendente", "Todas as ideias foram triadas ou não há envios.", Icons.Default.Inbox)
                 }
             }
         } else {
             items(filteredIdeas) { idea ->
-                IdeaCard(idea = idea, onClick = { onApproveClick(idea) })
+                IdeaFunnelCard(
+                    idea = idea,
+                    onPrioritize = { onPrioritizeClick(idea) },
+                    onApprove = { onApproveClick(idea) }
+                )
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
@@ -152,38 +186,147 @@ fun ManagerIdeasFunnel(ideas: List<Idea>, onApproveClick: (Idea) -> Unit) {
 }
 
 @Composable
-fun ManagerProjectsContent(projects: List<Project>) {
+fun IdeaFunnelCard(
+    idea: Idea,
+    onPrioritize: () -> Unit,
+    onApprove: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = GabSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(idea.titulo, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = GabTextPrimary)
+                    Text(idea.categoria, style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
+                }
+                Box(
+                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(
+                        when (idea.status) {
+                            IdeaStatus.PRIORIZADA -> StatusWarningBg
+                            else -> GabSecondary
+                        }
+                    ).padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(idea.status.label, style = MaterialTheme.typography.labelSmall,
+                        color = if (idea.status == IdeaStatus.PRIORIZADA) StatusWarning else GabTextPrimary,
+                        fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(idea.descricao, style = MaterialTheme.typography.bodySmall, color = GabTextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Person, contentDescription = null, tint = GabTextSecondary, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(idea.autorNome, style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                // Botão Priorizar — só aparece se não estiver já priorizada
+                if (idea.status != IdeaStatus.PRIORIZADA) {
+                    OutlinedButton(
+                        onClick = onPrioritize,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, StatusWarning)
+                    ) {
+                        Icon(Icons.Default.Flag, contentDescription = null, tint = StatusWarning, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Priorizar", color = StatusWarning, fontSize = 12.sp)
+                    }
+                }
+                Button(
+                    onClick = onApprove,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusSuccess)
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Aprovar", color = Color.White, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+// ── Projetos ──────────────────────────────────────────────────────────────────
+@Composable
+fun ManagerProjectsContent(projects: List<Project>, onProjectClick: (Project) -> Unit) {
     LazyColumn(contentPadding = PaddingValues(16.dp), modifier = Modifier.fillMaxSize()) {
         item {
-            Text("Gestão de Execução (Projetos)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
+            Text("Gestão de Execução", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
+            Text("Toque em um projeto para atualizar dados e resultados", style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
             Spacer(modifier = Modifier.height(16.dp))
         }
-
         if (projects.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Text("Nenhum projeto rodando.", color = GabTextSecondary)
+                    EmptyState("Nenhum projeto", "Projetos aparecem aqui após aprovação de ideias.", Icons.Default.AccountTree)
                 }
             }
         } else {
             items(projects.sortedBy { it.statusPrazo.ordinal }) { project ->
-                ProjectCard(project = project, onClick = {})
+                ProjectCard(project = project, onClick = { onProjectClick(project) })
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
     }
 }
 
+// ── Diretrizes (leitura) ──────────────────────────────────────────────────────
+@Composable
+fun ManagerGuidelinesContent(guidelines: List<com.conectagab.app.data.model.StrategicGuideline>) {
+    LazyColumn(contentPadding = PaddingValues(16.dp), modifier = Modifier.fillMaxSize()) {
+        item {
+            Text("Diretrizes Estratégicas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GabTextPrimary)
+            Text("Orientações definidas pela liderança", style = MaterialTheme.typography.labelSmall, color = GabTextSecondary)
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+        if (guidelines.isEmpty()) {
+            item {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    EmptyState("Nenhuma Diretriz", "A liderança ainda não cadastrou orientações estratégicas.", Icons.Default.Map)
+                }
+            }
+        } else {
+            items(guidelines) { guide ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    colors = CardDefaults.cardColors(containerColor = GabSurface),
+                    border = BorderStroke(1.dp, GabSecondary),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(GabAccent))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(guide.categoria, style = MaterialTheme.typography.labelMedium, color = GabTextSecondary, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(guide.titulo, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = GabTextPrimary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(guide.descricao, style = MaterialTheme.typography.bodySmall, color = GabTextSecondary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Dialog de Aprovação ───────────────────────────────────────────────────────
 @Composable
 fun ApproveAndCreateProjectDialog(
-    onDismiss: () -> Unit, 
+    onDismiss: () -> Unit,
     onConfirm: (Priority, Risk, String, String, String, Double, Double) -> Unit
 ) {
     var prioridade by remember { mutableStateOf(Priority.MEDIA) }
     var risco by remember { mutableStateOf(Risk.MEDIO) }
     var area by remember { mutableStateOf("Operações") }
-    
-    // Armazenamos apenas os dígitos numéricos no estado
     var dataInicio by remember { mutableStateOf(FormatUtils.removeNonDigits(DateUtils.getCurrentDate())) }
     var dataFim by remember { mutableStateOf(FormatUtils.removeNonDigits(DateUtils.addDaysToCurrentDate(30))) }
 
@@ -195,7 +338,7 @@ fun ApproveAndCreateProjectDialog(
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text("Preencha os SLAs de execução para converter em projeto.", style = MaterialTheme.typography.labelMedium, color = GabTextSecondary)
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Text("Prioridade", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 LazyRow {
                     items(Priority.values()) { prio ->
@@ -205,7 +348,7 @@ fun ApproveAndCreateProjectDialog(
                         }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Risco Estimado", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 LazyRow {
@@ -218,48 +361,35 @@ fun ApproveAndCreateProjectDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = area,
-                    onValueChange = { area = it },
-                    label = { Text("Área Responsável") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                )
+                OutlinedTextField(value = area, onValueChange = { area = it }, label = { Text("Área Responsável") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp))
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = dataInicio, 
-                        onValueChange = { dataInicio = FormatUtils.filterDateInput(it) }, 
-                        label = { Text("Início") }, 
-                        modifier = Modifier.weight(1f),
+                        value = dataInicio, onValueChange = { dataInicio = FormatUtils.filterDateInput(it) },
+                        label = { Text("Início") }, modifier = Modifier.weight(1f),
                         visualTransformation = DateVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                     OutlinedTextField(
-                        value = dataFim, 
-                        onValueChange = { dataFim = FormatUtils.filterDateInput(it) }, 
-                        label = { Text("Fim") }, 
-                        modifier = Modifier.weight(1f),
+                        value = dataFim, onValueChange = { dataFim = FormatUtils.filterDateInput(it) },
+                        label = { Text("Fim") }, modifier = Modifier.weight(1f),
                         visualTransformation = DateVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
-
             }
         },
         confirmButton = {
             Button(
-                onClick = { 
+                onClick = {
                     val fmtInicio = FormatUtils.formatDateString(dataInicio)
                     val fmtFim = FormatUtils.formatDateString(dataFim)
-                    onConfirm(prioridade, risco, area, fmtInicio, fmtFim, 0.0, 0.0) 
-                }, 
+                    onConfirm(prioridade, risco, area, fmtInicio, fmtFim, 0.0, 0.0)
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = StatusSuccess),
                 shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("Aprovar e Criar Projeto", color = Color.White)
-            }
+            ) { Text("Aprovar e Criar Projeto", color = Color.White) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar", color = GabTextSecondary) }

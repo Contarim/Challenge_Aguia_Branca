@@ -8,13 +8,19 @@ class ManagerViewModel(private val repository: AppRepository) : ViewModel() {
     val currentUser = repository.currentUser
     val ideas = repository.ideas
     val projects = repository.projects
+    val guidelines = repository.guidelines
 
     fun logout() {
         repository.logout()
     }
 
+    // ── Ideas ─────────────────────────────────────────────────────────────────
+    fun prioritizeIdea(ideaId: String) {
+        repository.updateIdeaStatus(ideaId, IdeaStatus.PRIORIZADA)
+    }
+
     fun approveIdeaAndCreateProject(
-        ideaId: String, 
+        ideaId: String,
         prioridade: Priority,
         risco: Risk,
         area: String,
@@ -25,10 +31,7 @@ class ManagerViewModel(private val repository: AppRepository) : ViewModel() {
         titulo: String,
         descricao: String
     ) {
-        // Primeiro, aprova a ideia
         repository.updateIdeaStatus(ideaId, IdeaStatus.APROVADA, prioridade)
-        
-        // Em seguida, cria o projeto de forma automatizada com os dados do modal
         repository.addProject(
             titulo = titulo,
             descricao = descricao,
@@ -39,6 +42,27 @@ class ManagerViewModel(private val repository: AppRepository) : ViewModel() {
             dataInicio = dataInicio,
             dataFim = dataFim,
             retorno = retorno
+        )
+    }
+
+    // ── Projects ──────────────────────────────────────────────────────────────
+    fun updateProject(
+        projectId: String,
+        responsavelNome: String,
+        area: String,
+        dataInicio: String,
+        dataFim: String,
+        investimento: Double,
+        retorno: Double,
+        status: ProjectStatus,
+        progresso: Int? = null,
+        etapa: String? = null,
+        economiaReal: Double? = null,
+        ganhoProdutividade: Double? = null
+    ) {
+        repository.updateProject(
+            projectId, responsavelNome, area, dataInicio, dataFim,
+            investimento, retorno, status, progresso, etapa, economiaReal, ganhoProdutividade
         )
     }
 }
